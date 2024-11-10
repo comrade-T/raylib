@@ -539,7 +539,7 @@ Font LoadFontFromMemory(const char *fileType, const unsigned char *fileData, int
     if (TextIsEqual(fileExtLower, ".ttf") ||
         TextIsEqual(fileExtLower, ".otf"))
     {
-        font.glyphs = LoadFontData(fileData, dataSize, font.baseSize, codepoints, font.glyphCount, FONT_DEFAULT);
+        font.glyphs = LoadFontData(fileData, dataSize, font.baseSize, codepoints, font.glyphCount, FONT_DEFAULT, &font.ascent, &font.descent, &font.lineGap);
     }
     else
 #endif
@@ -595,7 +595,7 @@ bool IsFontValid(Font font)
 
 // Load font data for further use
 // NOTE: Requires TTF font memory data and can generate SDF data
-GlyphInfo *LoadFontData(const unsigned char *fileData, int dataSize, int fontSize, int *codepoints, int codepointCount, int type)
+GlyphInfo *LoadFontData(const unsigned char *fileData, int dataSize, int fontSize, int *codepoints, int codepointCount, int type, int *ascent, int *descent, int *lineGap)
 {
     // NOTE: Using some SDF generation default values,
     // trades off precision with ability to handle *smaller* sizes
@@ -629,8 +629,11 @@ GlyphInfo *LoadFontData(const unsigned char *fileData, int dataSize, int fontSiz
 
             // Calculate font basic metrics
             // NOTE: ascent is equivalent to font baseline
-            int ascent, descent, lineGap;
-            stbtt_GetFontVMetrics(&fontInfo, &ascent, &descent, &lineGap);
+            stbtt_GetFontVMetrics(&fontInfo, ascent, descent, lineGap);
+
+            *ascent = (*ascent) * scaleFactor;
+            *descent = (*descent) * scaleFactor;
+            *lineGap = (*lineGap) * scaleFactor;
 
             // In case no chars count provided, default to 95
             codepointCount = (codepointCount > 0)? codepointCount : 95;
@@ -685,7 +688,7 @@ GlyphInfo *LoadFontData(const unsigned char *fileData, int dataSize, int fontSiz
                         chars[i].image.mipmaps = 1;
                         chars[i].image.format = PIXELFORMAT_UNCOMPRESSED_GRAYSCALE;
 
-                        chars[i].offsetY += (int)((float)ascent*scaleFactor);
+                        chars[i].offsetY += *ascent;
                     }
 
                     // NOTE: We create an empty image for space character,
